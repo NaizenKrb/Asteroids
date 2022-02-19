@@ -217,16 +217,16 @@ class Game(object):
                 if event.key == pygame.K_UP:
                     pass
                 if event.key == pygame.K_LEFT:
-                    self.ship.rotating = Settings.ship_rotation
+                    self.ship.ship_rotation = Settings.ship_rotation
                 if event.key == pygame.K_RIGHT:
-                    self.ship.rotating = Settings.ship_rotation * -1
+                    self.ship.ship_rotation = Settings.ship_rotation * -1
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     pass
                 if event.key == pygame.K_LEFT:
-                    self.ship.rotating = 0
+                    self.ship.ship_rotation = 0
                 if event.key == pygame.K_RIGHT:
-                    self.ship.rotating = 0
+                    self.ship.ship_rotation = 0
     
     def update(self):
         self.background.update()
