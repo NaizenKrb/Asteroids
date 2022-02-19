@@ -1,7 +1,7 @@
 import pygame
 import os
 import random
-from math import sqrt
+from math import sqrt, radians, cos, sin
 
 class Settings(object):
     window_width = 1200
@@ -13,9 +13,9 @@ class Settings(object):
     image_path = os.path.join(file_path, "images")
     sound_path = os.path.join(file_path, "sounds")
     
-    
     ship_scale = 2
     ship_rotation = 22.5
+    max_ship_speed = 6
     
     spawn_speed = 2000
     asteroid_speed = (-3,3)
@@ -57,36 +57,60 @@ class Ship(pygame.sprite.Sprite):
         self.image = self.idle_img
         self.rect = self.image.get_rect()
         self.rect.center = (Settings.window_width// 2, Settings.window_height - 50)
-        self.angle = 0
         
+        self.accelerating = False
         self.ship_rotation = 0
         self.rotation_delay = Timer(100)
-      
+        self.timer_acc = Timer(200)
+        
+        self.angle = 0
+        self.speed_x = 0
+        self.speed_y = 0
+        
     def scale_ship(self, image):
         self.rect = image.get_rect() 
         return pygame.transform.scale(image, (
             (self.rect.width * Settings.ship_scale),
             (self.rect.height * Settings.ship_scale)
         ))
-    
+        
+    #checks if a asteroid collides with the spaceship
+    def collision(self):
+        if pygame.sprite.spritecollide(self,game.asteroids, False, pygame.sprite.collide_mask):
+            game.running = False
+            
     def rotate(self, angle):
         ship_center = self.rect.center
         
         if self.rotation_delay.is_next_stop_reached():
             self.angle += angle
             self.angle %= 360
-            
-        self.image = pygame.transform.rotate(self.image, -self.angle)
+        
+        if self.accelerating == True:
+            self.image = self.accelerating_img
+        elif self.accelerating == False:
+            self.image = self.idle_img 
+        
+        self.image = pygame.transform.rotate(self.image, self.angle)
         self.rect = self.image.get_rect()
         self.rect.center = ship_center
         
     def accelerate(self):
-        pass
-    
+        if self.timer_acc.is_next_stop_reached():
+            if self.accelerating:
+                angle = radians(self.angle)
+                newspeed_x = self.speed_x - sin(angle)
+                newspeed_y = self.speed_y - cos(angle)
+                if abs(newspeed_x) < Settings.max_ship_speed and abs(newspeed_y) < Settings.max_ship_speed:
+                    self.speed_x = newspeed_x
+                    self.speed_y = newspeed_y
+            
     def update(self):
+        self.accelerate()
         self.rotate(self.ship_rotation)
+        self.collision()
         
-        #self.rect.move_ip()
+        self.rect.move_ip(self.speed_x, self.speed_y)
         
         if self.rect.right < 0:
             self.rect.left = Settings.window_width
@@ -136,8 +160,11 @@ class Asteroid(pygame.sprite.Sprite):
             dist = (sqrt(dist_x ** 2 + dist_y ** 2) - self.rect.width // 2 - asteroid.rect.width // 2)
             if dist < 1:
                 self.find_spawn()
+                
+    
      
     def update(self):
+        
         self.rect.move_ip(self.speed)
         
         
@@ -211,18 +238,20 @@ class Game(object):
             if event.type == pygame.QUIT:
                 self.running = False
             # Checks for events if a key is pressed
+            
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                 if event.key == pygame.K_UP:
-                    pass
+                    self.ship.accelerating = True
                 if event.key == pygame.K_LEFT:
-                    self.ship.ship_rotation = Settings.ship_rotation
-                if event.key == pygame.K_RIGHT:
                     self.ship.ship_rotation = Settings.ship_rotation * -1
-            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RIGHT:
+                    self.ship.ship_rotation = Settings.ship_rotation 
+                    
+            elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_UP:
-                    pass
+                    self.ship.accelerating = False
                 if event.key == pygame.K_LEFT:
                     self.ship.ship_rotation = 0
                 if event.key == pygame.K_RIGHT:
