@@ -6,7 +6,7 @@ from math import sqrt
 class Settings(object):
     window_width = 1200
     window_height = 700
-    window_title = "Astreroids 2"
+    window_title = "Asteroids"
     fps = 60
     
     file_path = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +15,7 @@ class Settings(object):
     
     
     ship_scale = 2
+    ship_rotation = 22.5
     
     spawn_speed = 2000
     asteroid_speed = (-3,3)
@@ -26,7 +27,8 @@ class Background(pygame.sprite.Sprite):
         self.image = pygame.image.load(os.path.join(Settings.image_path, "bg.png")).convert_alpha()
         self.image = pygame.transform.scale(self.image,(Settings.window_width, Settings.window_height))
         
-    # draws the background    
+    # draws the background
+        
     def draw(self, screen):
         screen.blit(self.image, (0,0))
 
@@ -55,7 +57,10 @@ class Ship(pygame.sprite.Sprite):
         self.image = self.idle_img
         self.rect = self.image.get_rect()
         self.rect.center = (Settings.window_width// 2, Settings.window_height - 50)
+        self.angle = 0
         
+        self.ship_rotation = 0
+        self.rotation_delay = Timer(100)
       
     def scale_ship(self, image):
         self.rect = image.get_rect() 
@@ -63,11 +68,25 @@ class Ship(pygame.sprite.Sprite):
             (self.rect.width * Settings.ship_scale),
             (self.rect.height * Settings.ship_scale)
         ))
+    
+    def rotate(self, angle):
+        ship_center = self.rect.center
+        
+        if self.rotation_delay.is_next_stop_reached():
+            self.angle += angle
+            self.angle %= 360
+            
+        self.image = pygame.transform.rotate(self.image, -self.angle)
+        self.rect = self.image.get_rect()
+        self.rect.center = ship_center
         
     def accelerate(self):
         pass
     
     def update(self):
+        self.rotate(self.ship_rotation)
+        
+        #self.rect.move_ip()
         
         if self.rect.right < 0:
             self.rect.left = Settings.window_width
@@ -132,8 +151,8 @@ class Asteroid(pygame.sprite.Sprite):
         if self.rect.top > Settings.window_height:
             self.rect.bottom = 0
             
-    def draw(self):
-        pass
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
     
     
 class Game(object):
@@ -175,6 +194,7 @@ class Game(object):
      
     def run(self):
         self.running = True
+        
         while self.running:
             self.clock.tick(Settings.fps)
             
@@ -197,9 +217,16 @@ class Game(object):
                 if event.key == pygame.K_UP:
                     pass
                 if event.key == pygame.K_LEFT:
-                    pass
+                    self.ship.rotating = Settings.ship_rotation
                 if event.key == pygame.K_RIGHT:
+                    self.ship.rotating = Settings.ship_rotation * -1
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
                     pass
+                if event.key == pygame.K_LEFT:
+                    self.ship.rotating = 0
+                if event.key == pygame.K_RIGHT:
+                    self.ship.rotating = 0
     
     def update(self):
         self.background.update()
