@@ -1,5 +1,7 @@
 import pygame
 import os
+import random
+from math import sqrt
 
 class Settings(object):
     window_width = 1200
@@ -11,7 +13,11 @@ class Settings(object):
     image_path = os.path.join(file_path, "images")
     sound_path = os.path.join(file_path, "sounds")
     
-    default_spawn_speed = 110
+    
+    ship_scale = 2
+    
+    spawn_speed = 2000
+    asteroid_speed = (-3,3)
     max_asteroids = 5
 
 
@@ -23,6 +29,7 @@ class Background(pygame.sprite.Sprite):
     # draws the background    
     def draw(self, screen):
         screen.blit(self.image, (0,0))
+
 
 # Class for the Timer made by our Teacher
 class Timer(object):
@@ -38,16 +45,97 @@ class Timer(object):
             self.next = pygame.time.get_ticks() + self.duration
             return True
         return False
+
     
 class Ship(pygame.sprite.Sprite):
-    def __init__(self,game) -> None:
+    def __init__(self) -> None:
         super().__init__()  
+        self.idle_img = self.scale_ship(pygame.image.load(os.path.join(Settings.image_path, "ship.png")))
+        self.accelerating_img = self.scale_ship(pygame.image.load(os.path.join(Settings.image_path,"ship_accelerating.png")))
+        self.image = self.idle_img
+        self.rect = self.image.get_rect()
+        self.rect.center = (Settings.window_width// 2, Settings.window_height - 50)
         
+      
+    def scale_ship(self, image):
+        self.rect = image.get_rect() 
+        return pygame.transform.scale(image, (
+            (self.rect.width * Settings.ship_scale),
+            (self.rect.height * Settings.ship_scale)
+        ))
         
-class Astreroid(pygame.sprite.Sprite):
-    def __init__(self,game) -> None:
+    def accelerate(self):
+        pass
+    
+    def update(self):
+        
+        if self.rect.right < 0:
+            self.rect.left = Settings.window_width
+        if self.rect.left > Settings.window_width:
+            self.rect.right = 0
+        
+        if self.rect.bottom < 0:
+            self.rect.top = Settings.window_height
+        if self.rect.top > Settings.window_height:
+            self.rect.bottom = 0
+            
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+      
+      
+class Asteroid(pygame.sprite.Sprite):
+    spawn_timer = Timer(Settings.spawn_speed)
+    images = [pygame.image.load(image) for image in [
+        os.path.join(Settings.image_path, "asteroid1.png"),
+        os.path.join(Settings.image_path, "asteroid2.png"),
+        os.path.join(Settings.image_path, "asteroid3.png")
+    ]]
+    
+    def __init__(self) -> None:
         super().__init__()
+        self.image = random.choice(Asteroid.images)
+        self.rect = self.image.get_rect()
+        self.find_spawn()
         
+        self.speed = (random.randint(*Settings.asteroid_speed),random.randint(*Settings.asteroid_speed))
+        if self.speed[0] == 0:
+            self.speed = (1, self.speed[1])
+            
+    def spawn_asteroid():
+        if len(game.asteroids) <= Settings.max_asteroids:
+            game.asteroids.add(Asteroid())   
+         
+    def find_spawn(self):
+        self.rect.top = random.randint(0,Settings.window_height - self.rect.height)
+        self.rect.left = random.randint(0,Settings.window_width - self.rect.width)
+        self.check_spawn()
+        
+    def check_spawn(self):
+        for asteroid in game.asteroids:
+            dist_x = abs(self.rect.center[0] - asteroid.rect.center[0])
+            dist_y = abs(self.rect.center[1] - asteroid.rect.center[1])
+            dist = (sqrt(dist_x ** 2 + dist_y ** 2) - self.rect.width // 2 - asteroid.rect.width // 2)
+            if dist < 1:
+                self.find_spawn()
+     
+    def update(self):
+        self.rect.move_ip(self.speed)
+        
+        
+        if self.rect.right < 0:
+            self.rect.left = Settings.window_width
+        if self.rect.left > Settings.window_width:
+            self.rect.right = 0
+        
+        if self.rect.bottom < 0:
+            self.rect.top = Settings.window_height
+        if self.rect.top > Settings.window_height:
+            self.rect.bottom = 0
+            
+    def draw(self):
+        pass
+    
+    
 class Game(object):
     def __init__(self) -> None:
         super().__init__()
@@ -57,23 +145,77 @@ class Game(object):
         pygame.init()
         pygame.display.set_caption(Settings.window_title)
         
+        """ for later use
         pygame.font.init()
         self.font_name = pygame.font.get_default_font()
         self.game_font = pygame.font.SysFont(self.font_name, 72)
         self.info_font = pygame.font.SysFont(self.font_name, 30)
         self.menu_font = pygame.font.SysFont(self.font_name, 40)
         self.font = pygame.font.Font(pygame.font.get_default_font(), 24)
+        """
         
         self.screen = pygame.display.set_mode((Settings.window_width, Settings.window_height))
         self.clock = pygame.time.Clock()
         
+        """ For later too
         self.pause = False
         self.start_screen = True
         self.game_over = False
+        
+        """
         self.running = False
         
-        
+        self.timer = Timer(1000)
+        self.spawn_timer = Timer(1000)
+
         self.asteroids = pygame.sprite.Group()  
         self.background = Background()
-        self.spaceship = pygame.sprite.GroupSingle()
-        self.spaceship.add(Ship("spaceship.png"))
+        self.ship = Ship()
+        
+     
+    def run(self):
+        self.running = True
+        while self.running:
+            self.clock.tick(Settings.fps)
+            
+            self.watch_for_events()
+            
+            self.update()
+            self.draw()
+
+            pygame.display.flip()
+        pygame.quit()
+    
+    def watch_for_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+            # Checks for events if a key is pressed
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.running = False
+                if event.key == pygame.K_UP:
+                    pass
+                if event.key == pygame.K_LEFT:
+                    pass
+                if event.key == pygame.K_RIGHT:
+                    pass
+    
+    def update(self):
+        self.background.update()
+        self.ship.update()
+        self.asteroids.update()
+       
+        if Asteroid.spawn_timer.is_next_stop_reached():
+            Asteroid.spawn_asteroid()
+       
+    def draw(self):
+        self.background.draw(self.screen)
+        self.ship.draw(self.screen)
+        self.asteroids.draw(self.screen)
+        
+        pygame.display.flip()
+            
+if __name__ == "__main__":
+    game = Game()
+    game.run()
