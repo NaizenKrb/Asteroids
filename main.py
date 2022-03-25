@@ -245,9 +245,9 @@ class Game(object):
                 if event.key == pygame.K_UP:
                     self.ship.accelerating = True
                 if event.key == pygame.K_LEFT:
-                    self.ship.ship_rotation = Settings.ship_rotation * -1
-                if event.key == pygame.K_RIGHT:
                     self.ship.ship_rotation = Settings.ship_rotation 
+                if event.key == pygame.K_RIGHT:
+                    self.ship.ship_rotation = Settings.ship_rotation * -1
                     
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_UP:
