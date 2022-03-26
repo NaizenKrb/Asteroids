@@ -24,6 +24,7 @@ class Settings(object):
 
 class Background(pygame.sprite.Sprite):
     def __init__(self) -> None:
+        super().__init__()
         self.image = pygame.image.load(os.path.join(Settings.image_path, "bg.png")).convert_alpha()
         self.image = pygame.transform.scale(self.image,(Settings.window_width, Settings.window_height))
         
@@ -49,7 +50,7 @@ class Timer(object):
         return False
 
     
-class Ship(pygame.sprite.Sprite):
+class Ship(pygame.sprite.DirtySprite):
     def __init__(self) -> None:
         super().__init__()  
         self.idle_img = self.scale_ship(pygame.image.load(os.path.join(Settings.image_path, "ship.png")))
@@ -60,12 +61,15 @@ class Ship(pygame.sprite.Sprite):
         
         self.accelerating = False
         self.ship_rotation = 0
-        self.rotation_delay = Timer(100)
-        self.timer_acc = Timer(200)
+        self.rotation_delay = Timer(50)
+        self.timer_acc = Timer(150)
         
         self.angle = 0
         self.speed_x = 0
         self.speed_y = 0
+        
+        self.status = 0
+        self.dirty = 1
         
     def scale_ship(self, image):
         self.rect = image.get_rect() 
@@ -122,6 +126,9 @@ class Ship(pygame.sprite.Sprite):
         if self.rect.top > Settings.window_height:
             self.rect.bottom = 0
             
+        self.status = 0
+        self.dirty = 1   
+        
     def draw(self, screen):
         screen.blit(self.image, self.rect)
       
@@ -136,7 +143,7 @@ class Asteroid(pygame.sprite.DirtySprite):
     
     def __init__(self) -> None:
         super().__init__()
-        self.image = random.choice(Asteroid.images)
+        self.image = Asteroid.images[0]
         self.rect = self.image.get_rect()
         self.find_spawn()
         
@@ -148,7 +155,7 @@ class Asteroid(pygame.sprite.DirtySprite):
             self.speed = (1, self.speed[1])
             
     def spawn_asteroid():
-        if len(game.all_asteroids) <= Settings.max_asteroids:
+        if len(game.all_asteroids)+1 <= Settings.max_asteroids:
             game.all_asteroids.add(Asteroid())   
          
     def find_spawn(self):
@@ -208,30 +215,28 @@ class Game(object):
         self.clock = pygame.time.Clock()
         
         
-        
-        
-        
-        
         """ For later too
         self.pause = False
         self.start_screen = True
         self.game_over = False
         
         """
+        
         self.running = False
         
         self.timer = Timer(1000)
-        self.spawn_timer = Timer(1000)
+        self.spawn_timer = Timer(3000)
         
-        self.all_asteroids = pygame.sprite.LayeredDirty()
-        self.all_bullets = pygame.sprite.LayeredDirty()
-
-
         self.background = Background()
-        self.ship = Ship()
+        self.ship = pygame.sprite.LayeredDirty(Ship())
+        self.all_asteroids = pygame.sprite.LayeredDirty()
+        #self.all_bullets = pygame.sprite.LayeredDirty() For later use
         
-        self.all_asteroids.clear(self.screen, self.background.image)         
+        self.all_asteroids.clear(self.screen, self.background.image)
+        self.ship.clear(self.screen, self.background.image)       
+        
         self.all_asteroids.set_timing_treshold(1000 / Settings.fps)
+        self.ship.set_timing_treshold(1000 / Settings.fps)
         
      
     def run(self):
@@ -258,22 +263,21 @@ class Game(object):
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                 if event.key == pygame.K_UP:
-                    self.ship.accelerating = True
+                    self.ship.sprites()[0].accelerating = True
                 if event.key == pygame.K_LEFT:
-                    self.ship.ship_rotation = Settings.ship_rotation 
+                    self.ship.sprites()[0].ship_rotation = Settings.ship_rotation 
                 if event.key == pygame.K_RIGHT:
-                    self.ship.ship_rotation = Settings.ship_rotation * -1
+                    self.ship.sprites()[0].ship_rotation = Settings.ship_rotation * -1
                     
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_UP:
-                    self.ship.accelerating = False
+                    self.ship.sprites()[0].accelerating = False
                 if event.key == pygame.K_LEFT:
-                    self.ship.ship_rotation = 0
+                    self.ship.sprites()[0].ship_rotation = 0
                 if event.key == pygame.K_RIGHT:
-                    self.ship.ship_rotation = 0
+                    self.ship.sprites()[0].ship_rotation = 0
     
     def update(self):
-        self.background.update()
         self.ship.update()
         self.all_asteroids.update()
        
@@ -281,16 +285,12 @@ class Game(object):
             Asteroid.spawn_asteroid()
        
     def draw(self):
-        self.background.draw(self.screen)
-        self.ship.draw(self.screen)
+        ship = self.ship.draw(self.screen)
+        asteroids = self.all_asteroids.draw(self.screen) 
+        sprites = ship + asteroids
         
-        dirtytiles = self.all_asteroids.draw(self.screen)
-        pygame.display.update(dirtytiles)
-        print(self.all_asteroids)
-        
-        #self.asteroids.draw(self.screen)
-        
-        #pygame.display.flip()
+        print(len(self.all_asteroids))
+        pygame.display.update(sprites)
             
 if __name__ == "__main__":
     game = Game()
