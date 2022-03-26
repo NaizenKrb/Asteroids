@@ -76,7 +76,7 @@ class Ship(pygame.sprite.Sprite):
         
     #checks if a asteroid collides with the spaceship
     def collision(self):
-        if pygame.sprite.spritecollide(self,game.asteroids, False, pygame.sprite.collide_mask):
+        if pygame.sprite.spritecollide(self,game.all_asteroids, False, pygame.sprite.collide_mask):
             game.running = False
             
     def rotate(self, angle):
@@ -126,7 +126,7 @@ class Ship(pygame.sprite.Sprite):
         screen.blit(self.image, self.rect)
       
       
-class Asteroid(pygame.sprite.Sprite):
+class Asteroid(pygame.sprite.DirtySprite):
     spawn_timer = Timer(Settings.spawn_speed)
     images = [pygame.image.load(image) for image in [
         os.path.join(Settings.image_path, "asteroid1.png"),
@@ -140,13 +140,16 @@ class Asteroid(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.find_spawn()
         
+        self.status = 0
+        self.dirty = 1
+        
         self.speed = (random.randint(*Settings.asteroid_speed),random.randint(*Settings.asteroid_speed))
         if self.speed[0] == 0:
             self.speed = (1, self.speed[1])
             
     def spawn_asteroid():
-        if len(game.asteroids) <= Settings.max_asteroids:
-            game.asteroids.add(Asteroid())   
+        if len(game.all_asteroids) <= Settings.max_asteroids:
+            game.all_asteroids.add(Asteroid())   
          
     def find_spawn(self):
         self.rect.top = random.randint(0,Settings.window_height - self.rect.height)
@@ -154,7 +157,7 @@ class Asteroid(pygame.sprite.Sprite):
         self.check_spawn()
         
     def check_spawn(self):
-        for asteroid in game.asteroids:
+        for asteroid in game.all_asteroids:
             dist_x = abs(self.rect.center[0] - asteroid.rect.center[0])
             dist_y = abs(self.rect.center[1] - asteroid.rect.center[1])
             dist = (sqrt(dist_x ** 2 + dist_y ** 2) - self.rect.width // 2 - asteroid.rect.width // 2)
@@ -164,10 +167,8 @@ class Asteroid(pygame.sprite.Sprite):
     
      
     def update(self):
-        
         self.rect.move_ip(self.speed)
-        
-        
+    
         if self.rect.right < 0:
             self.rect.left = Settings.window_width
         if self.rect.left > Settings.window_width:
@@ -177,6 +178,9 @@ class Asteroid(pygame.sprite.Sprite):
             self.rect.top = Settings.window_height
         if self.rect.top > Settings.window_height:
             self.rect.bottom = 0
+            
+        self.status = 1
+        self.dirty = 1
             
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -203,6 +207,11 @@ class Game(object):
         self.screen = pygame.display.set_mode((Settings.window_width, Settings.window_height))
         self.clock = pygame.time.Clock()
         
+        
+        
+        
+        
+        
         """ For later too
         self.pause = False
         self.start_screen = True
@@ -213,10 +222,16 @@ class Game(object):
         
         self.timer = Timer(1000)
         self.spawn_timer = Timer(1000)
+        
+        self.all_asteroids = pygame.sprite.LayeredDirty()
+        self.all_bullets = pygame.sprite.LayeredDirty()
 
-        self.asteroids = pygame.sprite.Group()  
+
         self.background = Background()
         self.ship = Ship()
+        
+        self.all_asteroids.clear(self.screen, self.background.image)         
+        self.all_asteroids.set_timing_treshold(1000 / Settings.fps)
         
      
     def run(self):
@@ -260,7 +275,7 @@ class Game(object):
     def update(self):
         self.background.update()
         self.ship.update()
-        self.asteroids.update()
+        self.all_asteroids.update()
        
         if Asteroid.spawn_timer.is_next_stop_reached():
             Asteroid.spawn_asteroid()
@@ -268,9 +283,14 @@ class Game(object):
     def draw(self):
         self.background.draw(self.screen)
         self.ship.draw(self.screen)
-        self.asteroids.draw(self.screen)
         
-        pygame.display.flip()
+        dirtytiles = self.all_asteroids.draw(self.screen)
+        pygame.display.update(dirtytiles)
+        print(self.all_asteroids)
+        
+        #self.asteroids.draw(self.screen)
+        
+        #pygame.display.flip()
             
 if __name__ == "__main__":
     game = Game()
