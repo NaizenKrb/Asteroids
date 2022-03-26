@@ -289,7 +289,6 @@ class Game(object):
         asteroids = self.all_asteroids.draw(self.screen) 
         sprites = ship + asteroids
         
-        print(len(self.all_asteroids))
         pygame.display.update(sprites)
             
 if __name__ == "__main__":
