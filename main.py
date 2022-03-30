@@ -25,7 +25,6 @@ class Settings(object):
     max_ttl = 5000
     bullet_scale = 1
     max_bullets = 10
-    
 
 class Background(pygame.sprite.Sprite):
     def __init__(self) -> None:
@@ -87,6 +86,7 @@ class Ship(pygame.sprite.DirtySprite):
     def collision(self):
         if pygame.sprite.spritecollide(self,game.all_asteroids, False, pygame.sprite.collide_mask):
             game.running = False
+     
             
     def rotate(self, angle):
         ship_center = self.rect.center
@@ -103,6 +103,7 @@ class Ship(pygame.sprite.DirtySprite):
         self.image = pygame.transform.rotate(self.image, self.angle)
         self.rect = self.image.get_rect()
         self.rect.center = ship_center
+     
         
     def accelerate(self):
         if self.timer_acc.is_next_stop_reached():
@@ -113,11 +114,12 @@ class Ship(pygame.sprite.DirtySprite):
                 if abs(newspeed_x) < Settings.max_ship_speed and abs(newspeed_y) < Settings.max_ship_speed:
                     self.speed_x = newspeed_x
                     self.speed_y = newspeed_y
+    
         
     def update(self):
         self.accelerate()
         self.rotate(self.ship_rotation)
-        self.collision()
+        #self.collision()
         
         self.rect.move_ip(self.speed_x, self.speed_y)
         
@@ -133,10 +135,12 @@ class Ship(pygame.sprite.DirtySprite):
             
         self.status = 0
         self.dirty = 1   
+     
         
     def shoot(self):
         if len(game.all_bullets) < Settings.max_bullets:
             game.all_bullets.add(Bullet(self.angle, (self.speed_x, self.speed_y), self.rect.center))
+    
               
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -166,7 +170,6 @@ class Bullet(pygame.sprite.DirtySprite):
             (self.rect.height * Settings.bullet_scale)
         ))
 
-    
     # Calculate speed of the Bullet with angle of Ship and min Speed of the Settings
     
     def calculate_speed(self, speed):
@@ -193,14 +196,17 @@ class Bullet(pygame.sprite.DirtySprite):
             
         return newspeed
 
+
     def move(self):
         self.rect.move_ip(self.speed[0], self.speed[1])
         self.dirty = 1
+    
     
     def update(self):
         if self.ttl.is_next_stop_reached():
             self.kill()
         self.move()
+    
     
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -225,15 +231,18 @@ class Asteroid(pygame.sprite.DirtySprite):
         self.speed = (random.randint(*Settings.asteroid_speed),random.randint(*Settings.asteroid_speed))
         if self.speed[0] == 0:
             self.speed = (1, self.speed[1])
+      
             
     def spawn_asteroid():
         if len(game.all_asteroids)+1 <= Settings.max_asteroids:
             game.all_asteroids.add(Asteroid())   
+       
          
     def find_spawn(self):
         self.rect.top = random.randint(0,Settings.window_height - self.rect.height)
         self.rect.left = random.randint(0,Settings.window_width - self.rect.width)
         self.check_spawn()
+       
         
     def check_spawn(self):
         for asteroid in game.all_asteroids:
@@ -242,6 +251,7 @@ class Asteroid(pygame.sprite.DirtySprite):
             dist = (sqrt(dist_x ** 2 + dist_y ** 2) - self.rect.width // 2 - asteroid.rect.width // 2)
             if dist < 1:
                 self.find_spawn()
+            #find spawn that is not too close to the ship
                 
      
     def update(self):
@@ -259,6 +269,7 @@ class Asteroid(pygame.sprite.DirtySprite):
             
         self.status = 1
         self.dirty = 1
+        
             
     def draw(self, screen):
         screen.blit(self.image, self.rect)
@@ -365,8 +376,6 @@ class Game(object):
         asteroids = self.all_asteroids.draw(self.screen)
         bullets = self.all_bullets.draw(self.screen)
         sprites = ship + asteroids + bullets
-        
-        print(len(self.all_bullets))
         
         pygame.display.update(sprites)
             
