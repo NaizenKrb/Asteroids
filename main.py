@@ -179,16 +179,16 @@ class Bullet(pygame.sprite.DirtySprite):
         newspeed.append(newspeed_x)
         newspeed.append(newspeed_y)
         
-        if abs(newspeed[0]) > 0 and abs(newspeed[0]) < Settings.bullet_min_speed:
+        if newspeed[0] > 0 and newspeed[0] < Settings.bullet_min_speed:
             newspeed[0] = Settings.bullet_min_speed
 
         elif newspeed[0] < 0 and newspeed[0] > -Settings.bullet_min_speed:
             newspeed[0] = -Settings.bullet_min_speed
             
-        if abs(newspeed[1]) > 0 and abs(newspeed[1]) < Settings.bullet_min_speed:
+        if newspeed[1] > 0 and newspeed[1] < Settings.bullet_min_speed:
             newspeed[1] = Settings.bullet_min_speed
         
-        elif abs(newspeed[1]) < 0 and abs(newspeed[1]) > -Settings.bullet_min_speed:
+        elif newspeed[1] < 0 and newspeed[1] > -Settings.bullet_min_speed:
             newspeed[1] = -Settings.bullet_min_speed
             
         return newspeed
