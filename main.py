@@ -13,14 +13,19 @@ class Settings(object):
     image_path = os.path.join(file_path, "images")
     sound_path = os.path.join(file_path, "sounds")
     
-    ship_scale = 2
+    ship_scale = 1.5
     ship_rotation = 22.5
     max_ship_speed = 6
     
     spawn_speed = 2000
     asteroid_speed = (-3,3)
     max_asteroids = 5
-
+    
+    bullet_min_speed = 3
+    max_ttl = 5000
+    bullet_scale = 1
+    max_bullets = 10
+    
 
 class Background(pygame.sprite.Sprite):
     def __init__(self) -> None:
@@ -108,7 +113,7 @@ class Ship(pygame.sprite.DirtySprite):
                 if abs(newspeed_x) < Settings.max_ship_speed and abs(newspeed_y) < Settings.max_ship_speed:
                     self.speed_x = newspeed_x
                     self.speed_y = newspeed_y
-            
+        
     def update(self):
         self.accelerate()
         self.rotate(self.ship_rotation)
@@ -129,9 +134,76 @@ class Ship(pygame.sprite.DirtySprite):
         self.status = 0
         self.dirty = 1   
         
+    def shoot(self):
+        if len(game.all_bullets) < Settings.max_bullets:
+            game.all_bullets.add(Bullet(self.angle, (self.speed_x, self.speed_y), self.rect.center))
+              
     def draw(self, screen):
         screen.blit(self.image, self.rect)
-      
+ 
+class Bullet(pygame.sprite.DirtySprite):
+    def __init__(self, angle, speed, pos) -> None:
+        super().__init__()
+        
+        self.angle = angle
+        self.speed = self.calculate_speed(speed)
+        self.pos = pos
+        
+        self.image = self.scale_bullet(pygame.image.load(os.path.join(Settings.image_path, "bullet.png")).convert_alpha())
+        self.rect = self.image.get_rect()
+        self.image = pygame.transform.rotate(self.image, self.angle)
+        self.rect.center = self.pos
+        
+        self.ttl = Timer(Settings.max_ttl, False)
+        
+        self.dirty = 1
+    
+    
+    def scale_bullet(self, image):
+        self.rect = image.get_rect()
+        return pygame.transform.scale(image, (
+            (self.rect.width * Settings.bullet_scale),
+            (self.rect.height * Settings.bullet_scale)
+        ))
+
+    
+    # Calculate speed of the Bullet with angle of Ship and min Speed of the Settings
+    
+    def calculate_speed(self, speed):
+        angle = radians(self.angle)
+        
+        newspeed = []
+        newspeed_x = speed[0] - sin(angle)
+        newspeed_y = speed[1] - cos(angle)
+        
+        newspeed.append(newspeed_x)
+        newspeed.append(newspeed_y)
+        
+        if abs(newspeed[0]) > 0 and abs(newspeed[0]) < Settings.bullet_min_speed:
+            newspeed[0] = Settings.bullet_min_speed
+
+        elif newspeed[0] < 0 and newspeed[0] > -Settings.bullet_min_speed:
+            newspeed[0] = -Settings.bullet_min_speed
+            
+        if abs(newspeed[1]) > 0 and abs(newspeed[1]) < Settings.bullet_min_speed:
+            newspeed[1] = Settings.bullet_min_speed
+        
+        elif abs(newspeed[1]) < 0 and abs(newspeed[1]) > -Settings.bullet_min_speed:
+            newspeed[1] = -Settings.bullet_min_speed
+            
+        return newspeed
+
+    def move(self):
+        self.rect.move_ip(self.speed[0], self.speed[1])
+        self.dirty = 1
+    
+    def update(self):
+        if self.ttl.is_next_stop_reached():
+            self.kill()
+        self.move()
+    
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
       
 class Asteroid(pygame.sprite.DirtySprite):
     spawn_timer = Timer(Settings.spawn_speed)
@@ -171,7 +243,6 @@ class Asteroid(pygame.sprite.DirtySprite):
             if dist < 1:
                 self.find_spawn()
                 
-    
      
     def update(self):
         self.rect.move_ip(self.speed)
@@ -230,13 +301,15 @@ class Game(object):
         self.background = Background()
         self.ship = pygame.sprite.LayeredDirty(Ship())
         self.all_asteroids = pygame.sprite.LayeredDirty()
-        #self.all_bullets = pygame.sprite.LayeredDirty() For later use
+        self.all_bullets = pygame.sprite.LayeredDirty()
         
         self.all_asteroids.clear(self.screen, self.background.image)
-        self.ship.clear(self.screen, self.background.image)       
+        self.ship.clear(self.screen, self.background.image)  
+        self.all_bullets.clear(self.screen, self.background.image)     
         
         self.all_asteroids.set_timing_treshold(1000 / Settings.fps)
         self.ship.set_timing_treshold(1000 / Settings.fps)
+        self.all_bullets.set_timing_treshold(1000 / Settings.fps)
         
      
     def run(self):
@@ -268,6 +341,8 @@ class Game(object):
                     self.ship.sprites()[0].ship_rotation = Settings.ship_rotation 
                 if event.key == pygame.K_RIGHT:
                     self.ship.sprites()[0].ship_rotation = Settings.ship_rotation * -1
+                if event.key == pygame.K_KP_ENTER or event.key == pygame.K_RETURN:
+                    self.ship.sprites()[0].shoot()
                     
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_UP:
@@ -280,14 +355,18 @@ class Game(object):
     def update(self):
         self.ship.update()
         self.all_asteroids.update()
+        self.all_bullets.update()
        
         if Asteroid.spawn_timer.is_next_stop_reached():
             Asteroid.spawn_asteroid()
        
     def draw(self):
         ship = self.ship.draw(self.screen)
-        asteroids = self.all_asteroids.draw(self.screen) 
-        sprites = ship + asteroids
+        asteroids = self.all_asteroids.draw(self.screen)
+        bullets = self.all_bullets.draw(self.screen)
+        sprites = ship + asteroids + bullets
+        
+        print(len(self.all_bullets))
         
         pygame.display.update(sprites)
             
